@@ -1,0 +1,4 @@
+*.pyc
+
+MNIST_data/
+logs/
