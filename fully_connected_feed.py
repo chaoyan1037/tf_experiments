@@ -50,8 +50,6 @@ def placeholder_inputs(batch_size):
   images_placeholder = tf.placeholder(tf.float32, shape=(batch_size,
                                                          mnist.IMAGE_PIXELS), name='images_pl')
   labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size), name='labels_pl')
-  #images = tf.reshape(images_placeholder, [-1, 28, 28, 1])  
-  #tf.summary.image('inputs_images', images, batch_size)
   return images_placeholder, labels_placeholder
 
 
@@ -132,7 +130,7 @@ def run_training():
 
     # Add to the Graph the Ops for loss calculation.
     loss = mnist.loss(logits, labels_placeholder)
-    tf.summary.scalar('the_loss', loss)
+    #tf.summary.scalar('the_loss', loss)
 
     # Add to the Graph the Ops that calculate and apply gradients.
     train_op = mnist.training(loss, FLAGS.learning_rate)
@@ -177,8 +175,7 @@ def run_training():
       # inspect the values of your Ops or variables, you may include them
       # in the list passed to sess.run() and the value tensors will be
       # returned in the tuple from the call.
-      #_, loss_value = sess.run([train_op, loss],
-      #                         feed_dict=feed_dict)
+      loss_value = 0
       _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
       duration = time.time() - start_time
 
@@ -259,13 +256,13 @@ if __name__ == '__main__':
   parser.add_argument(
       '--input_data_dir',
       type=str,
-      default='/home/yanchao/Documents/GAN/tf/input_data',
+      default='./input_data',
       help='Directory to put the input data.'
   )
   parser.add_argument(
       '--log_dir',
       type=str,
-      default='/home/yanchao/Documents/GAN/tf/logs/fully_connected_feed',
+      default='./logs/fully_connected_feed',
       help='Directory to put the log data.'
   )
   parser.add_argument(
