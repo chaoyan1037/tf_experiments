@@ -30,6 +30,8 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 from tensorflow.examples.tutorials.mnist import mnist
 
+import mnist
+
 # Basic model parameters as external flags.
 FLAGS = None
 
@@ -47,8 +49,8 @@ def placeholder_inputs(batch_size):
   # Note that the shapes of the placeholders match the shapes of the full
   # image and label tensors, except the first dimension is now batch_size
   # rather than the full size of the train or test data sets.
-  images_placeholder = tf.placeholder(tf.float32, shape=(batch_size,
-                                                         mnist.IMAGE_PIXELS), name='images_pl')
+  images_placeholder = tf.placeholder(tf.float32,
+    shape=(batch_size, mnist.IMAGE_PIXELS),name='images_pl')
   labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size), name='labels_pl')
   return images_placeholder, labels_placeholder
 
@@ -121,7 +123,7 @@ def run_training():
         FLAGS.batch_size)
 
     images = tf.reshape(images_placeholder, [-1, 28, 28, 1])  
-    tf.summary.image('inputs_images', images, FLAGS.batch_size)
+    tf.summary.image('inputs_images', images, 2)
     
     # Build a Graph that computes predictions from the inference model.
     logits = mnist.inference(images_placeholder,
@@ -262,7 +264,7 @@ if __name__ == '__main__':
   parser.add_argument(
       '--log_dir',
       type=str,
-      default='./logs/fully_connected_feed',
+      default='./log/fully_connected_feed',
       help='Directory to put the log data.'
   )
   parser.add_argument(
