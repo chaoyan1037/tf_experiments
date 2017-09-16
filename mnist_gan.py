@@ -1,4 +1,5 @@
 
+# reference https://github.com/NELSONZHAO/zhihu/tree/master/mnist_gan
 
 import matplotlib.pyplot as plt
 import numpy as np
