@@ -16,9 +16,9 @@ real_img_size = mnist.train.images[0].shape[0]
 
 noise_img_size = 100
 
-g_uints = 128
+g_units = 128
 
-d_uints = 128
+d_units = 128
 
 alpha = 0.01
 
@@ -57,15 +57,15 @@ def get_generator(noise_img, n_units, out_dim, reuse = False, alpha = 0.01):
 	with tf.variable_scope("generator", reuse = reuse):
 		# hidden layer
 		hidden = tf.layers.dense(noise_img, n_units)
-		# leaky Relu
+        # leaky ReLU
 		relu = tf.maximum(alpha * hidden, hidden)
-		# dropout
-		drop = tf.layers.dropout(hidden, rate = 0.2)
+        # dropout
+		drop = tf.layers.dropout(relu, rate = 0.5)
 
-		# logits & output
+        # logits & outputs
 		logits = tf.layers.dense(drop, out_dim)
 		outputs = tf.tanh(logits)
-
+        
 		return logits, outputs
 
 
@@ -76,15 +76,15 @@ def get_discriminator(img, n_units, reuse = False, alpha = 0.01):
 	n_units: # hidden units
 	alpha: parameter of leaky Relu
 	"""
-	with tf.variable_scope("discriminator", reuse = reuse):
-		# hidden layer
+	with tf.variable_scope("discriminator", reuse=reuse):
+        # hidden layer
 		hidden = tf.layers.dense(img, n_units)
 		relu = tf.maximum(alpha * hidden, hidden)
-
-		# logits & outputs
+        
+        # logits & outputs
 		logits = tf.layers.dense(relu, 1)
 		outputs = tf.sigmoid(logits)
-
+        
 		return logits, outputs
 
 
@@ -93,34 +93,28 @@ with tf.Graph().as_default():
 	real_img, noise_img = get_inputs(real_img_size, noise_img_size)
 
 	# generator
-	g_logits, g_outputs = get_generator(noise_img, g_uints, real_img_size)
+	g_logits, g_outputs = get_generator(noise_img, g_units, real_img_size)
 
 	# ten = tf.convert_to_tensor(g_outputs)
 	sample_images = tf.reshape(g_outputs, [-1, 28, 28, 1])
 	tf.summary.image("sample_images", sample_images, 10)
 
-
 	# discriminator
-	d_logits_real, d_outputs_real = get_discriminator(real_img, d_uints)
-	d_logits_fake, d_outputs_fake = get_discriminator(g_outputs, d_uints,
-		reuse = True)
+	d_logits_real, d_outputs_real = get_discriminator(real_img, d_units)
+	d_logits_fake, d_outputs_fake = get_discriminator(g_outputs, d_units, reuse = True)
 
 
-	# d loss
-	d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-		logits = d_logits_real,
-		labels = tf.ones_like(d_logits_real) * (1 - smooth)))
-
-	d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-		logits = d_logits_fake,
-		labels = tf.zeros_like(d_logits_fake)))
-
+	# discriminator loss
+	d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = d_logits_real, 
+	                                                                     labels = tf.ones_like(d_logits_real)) * (1 - smooth))
+	d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = d_logits_fake, 
+	                                                                     labels = tf.zeros_like(d_logits_fake)))
+	# loss
 	d_loss = tf.add(d_loss_real, d_loss_fake)
 
-	# g loss
-	g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-		logits = d_logits_fake,
-		labels = tf.ones_like(d_logits_fake) * (1 - smooth))) 
+	# generator loss
+	g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = d_logits_fake,
+	                                                                labels = tf.ones_like(d_logits_fake)) * (1 - smooth))
 
 
 	tf.summary.scalar("d_loss_real", d_loss_real)
@@ -131,15 +125,14 @@ with tf.Graph().as_default():
 	# optimizer
 	train_vars = tf.trainable_variables()
 
-	g_vars = [v for v in train_vars if v.name.startswith("generator")]
+	# generator tensor
+	g_vars = [var for var in train_vars if var.name.startswith("generator")]
+	# discriminator tensor
+	d_vars = [var for var in train_vars if var.name.startswith("discriminator")]
 
-	d_vars = [v for v in train_vars if v.name.startswith("discriminator")]
-
-	d_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(d_loss,
-		var_list = d_vars)
-
-	g_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(g_loss,
-		var_list = g_vars)
+	# optimizer
+	d_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(d_loss, var_list=d_vars)
+	g_train_opt = tf.train.AdamOptimizer(learning_rate).minimize(g_loss, var_list=g_vars)
 
 	summary = tf.summary.merge_all()
 
@@ -172,36 +165,34 @@ with tf.Graph().as_default():
 			sess.run(g_train_opt,
 				feed_dict = {noise_img: noises})
 
-		# train loss
-		#images = 2 * mnist.train.images - 1.0
-		#noises = np.random.uniform(-1, 1,
-		#	size = (mnist.train.num_examples, noise_img_size))
+		if e%10 == 0:
+			# train loss
+			images = 2 * mnist.train.images - 1.0
+			noises = np.random.uniform(-1, 1,
+				size = (mnist.train.num_examples, noise_img_size))
 
-		summary_str, train_loss_d_real, train_loss_d_fake, train_loss_g = \
-			sess.run([summary, d_loss_real, d_loss_fake, g_loss],
-			feed_dict = {real_img: images, noise_img: noises})
+			summary_str, train_loss_d_real, train_loss_d_fake, train_loss_g = \
+				sess.run([summary, d_loss_real, d_loss_fake, g_loss],
+				feed_dict = {real_img: images, noise_img: noises})
 
-		summary_writer.add_summary(summary_str, e)
-		summary_writer.flush()
-		
-		train_loss_d = train_loss_d_real + train_loss_d_fake
+			summary_writer.add_summary(summary_str, e)
+			summary_writer.flush()
+			
+			train_loss_d = train_loss_d_real + train_loss_d_fake
 
+			print("Epoch {}/{}".format(e+1, epochs),
+				"Discriminator loss: {:.4f}(Real: {:.4f} + Fake: {:.4f})".format(
+					train_loss_d, train_loss_d_real, train_loss_d_fake),
+				"Generator loss: {:.4f}".format(train_loss_g))
 
+			
 
+			# sample_noise = np.random.uniform(-1, 1, size=(n_samples, noise_img_size))
+			# gen_samples = sess.run(get_generator(noise_img, g_uints, real_img_size, reuse = True),
+			#	feed_dict = {noise_img: sample_noise})
 
-		print("Epoch {}/{}".format(e+1, epochs),
-			"Discriminator loss: {:.4f}(Real: {:.4f} + Fake: {:.4f})".format(
-				train_loss_d, train_loss_d_real, train_loss_d_fake),
-			"Generator loss: {:.4f}".format(train_loss_g))
+			
 
-		
-
-		# sample_noise = np.random.uniform(-1, 1, size=(n_samples, noise_img_size))
-		# gen_samples = sess.run(get_generator(noise_img, g_uints, real_img_size, reuse = True),
-		#	feed_dict = {noise_img: sample_noise})
-
-		
-
-		# save checkpoints
-		saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), global_step = e)
+			# save checkpoints
+			saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), global_step = e)
 
