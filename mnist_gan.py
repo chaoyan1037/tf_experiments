@@ -25,15 +25,14 @@ alpha = 0.01
 
 learning_rate = 0.001
 
-smooth = 0.1
+smooth = 0.01
 
 # train
-batch_size = 64
-batch_num = mnist.train.num_examples//batch_size
+batch_size = 50
+k = 10
 
 epochs = 300
 
-losses = []
 
 def get_inputs(real_img_size, noise_img_size):
 	"""
@@ -61,7 +60,7 @@ def get_generator(noise_img, n_units, out_dim, reuse = False, alpha = 0.01):
         # leaky ReLU
 		relu = tf.maximum(alpha * hidden, hidden)
         # dropout
-		drop = tf.layers.dropout(relu, rate = 0.5)
+		drop = tf.layers.dropout(relu, rate = 0.2)
 
         # logits & outputs
 		logits = tf.layers.dense(drop, out_dim)
@@ -117,7 +116,6 @@ with tf.Graph().as_default():
 	g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = d_logits_fake,
 	                                                                labels = tf.ones_like(d_logits_fake)) * (1 - smooth))
 
-
 	tf.summary.scalar("d_loss_real", d_loss_real)
 	tf.summary.scalar("d_loss_fake", d_loss_fake)
 	tf.summary.scalar("d_loss", d_loss)
@@ -149,51 +147,49 @@ with tf.Graph().as_default():
 	sess.run(init)
 
 	for e in xrange(epochs):
-		for i in xrange(batch_num):
-			batch = mnist.train.next_batch(batch_size)
+		for i in xrange(mnist.train.num_examples//(batch_size * k)):
+			for j in xrange(k):
+				batch = mnist.train.next_batch(batch_size)
 
-			images = batch[0].reshape((batch_size, 784))
-			# scale the input images
-			images = 2 * images - 1
+				images = batch[0].reshape((batch_size, 784))
+				# scale the input images
+				images = 2 * images - 1
 
-			# generator input noises
-			noises = np.random.uniform(-1, 1,
-				size = (batch_size, noise_img_size))
+				# generator input noises
+				noises = np.random.uniform(-1, 1,
+					size = (batch_size, noise_img_size))
 
-			# Run optimizer
-			sess.run(d_train_opt,
-				feed_dict = {real_img: images, noise_img: noises})
-			sess.run(g_train_opt,
-				feed_dict = {noise_img: noises})
+				# Run optimizer
+				sess.run([d_train_opt, g_train_opt],
+					feed_dict = {real_img: images, noise_img: noises})
+		
+		# train loss
+		images = 2 * mnist.train.images - 1.0
+		noises = np.random.uniform(-1, 1,
+			size = (mnist.train.num_examples, noise_img_size))
 
-		if e%10 == 0:
-			# train loss
-			images = 2 * mnist.train.images - 1.0
-			noises = np.random.uniform(-1, 1,
-				size = (mnist.train.num_examples, noise_img_size))
+		summary_str, train_loss_d_real, train_loss_d_fake, train_loss_g = \
+			sess.run([summary, d_loss_real, d_loss_fake, g_loss],
+			feed_dict = {real_img: images, noise_img: noises})
 
-			summary_str, train_loss_d_real, train_loss_d_fake, train_loss_g = \
-				sess.run([summary, d_loss_real, d_loss_fake, g_loss],
-				feed_dict = {real_img: images, noise_img: noises})
+		summary_writer.add_summary(summary_str, e)
+		summary_writer.flush()
+		
+		train_loss_d = train_loss_d_real + train_loss_d_fake
 
-			summary_writer.add_summary(summary_str, e)
-			summary_writer.flush()
-			
-			train_loss_d = train_loss_d_real + train_loss_d_fake
-
-			print("Epoch {}/{}".format(e+1, epochs),
-				"Discriminator loss: {:.4f}(Real: {:.4f} + Fake: {:.4f})".format(
-					train_loss_d, train_loss_d_real, train_loss_d_fake),
-				"Generator loss: {:.4f}".format(train_loss_g))
+		print("Epoch {}/{}".format(e+1, epochs),
+			"Discriminator loss: {:.4f}(Real: {:.4f} + Fake: {:.4f})".format(
+				train_loss_d, train_loss_d_real, train_loss_d_fake),
+			"Generator loss: {:.4f}".format(train_loss_g))
 
 			
 
-			# sample_noise = np.random.uniform(-1, 1, size=(n_samples, noise_img_size))
-			# gen_samples = sess.run(get_generator(noise_img, g_uints, real_img_size, reuse = True),
-			#	feed_dict = {noise_img: sample_noise})
+		# sample_noise = np.random.uniform(-1, 1, size=(n_samples, noise_img_size))
+		# gen_samples = sess.run(get_generator(noise_img, g_uints, real_img_size, reuse = True),
+		#	feed_dict = {noise_img: sample_noise})
 
-			
+		
 
-			# save checkpoints
-			saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), global_step = e)
+		# save checkpoints
+		saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), global_step = e)
 
