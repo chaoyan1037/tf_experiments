@@ -11,7 +11,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 mnist = input_data.read_data_sets('./MNIST_data/', one_hot=True)
 
-LOGDIR = "./log/mnist_gan" 
+LOGDIR = "./log/mnist_cgan" 
 
 real_img_size = mnist.train.images[0].shape[0]
 
@@ -41,7 +41,7 @@ def get_inputs(real_img_size, noise_img_size):
 	real_img = tf.placeholder(tf.float32,
 		shape = [None, real_img_size], name = "real_img")
 
-	real_img_digit = tf.placeholder(tf.float32, shape = [None, 10])
+	real_img_digit = tf.placeholder(tf.float32, shape = [None, k])
 
 	noise_img = tf.placeholder(tf.float32,
 		shape = [None, noise_img_size], name = "noise_img")
