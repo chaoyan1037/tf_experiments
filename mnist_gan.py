@@ -21,11 +21,11 @@ g_units = 128
 
 d_units = 128
 
-alpha = 0.01
+alpha = 0.1
 
 learning_rate = 0.001
 
-smooth = 0.01
+smooth = 0.05
 
 # train
 batch_size = 50
@@ -44,6 +44,12 @@ def get_inputs(real_img_size, noise_img_size):
 		shape = [None, noise_img_size], name = "noise_img")
 	return real_img, noise_img
 
+def get_sample(sample_shape):
+	"""
+	generator output noise image
+	"""
+	noise = np.random.normal(0.0, 1.0, sample_shape)
+	return noise
 
 def get_generator(noise_img, n_units, out_dim, reuse = False, alpha = 0.01):
 	"""
@@ -114,7 +120,7 @@ with tf.Graph().as_default():
 
 	# generator loss
 	g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits = d_logits_fake,
-	                                                                labels = tf.ones_like(d_logits_fake)) * (1 - smooth))
+	                                                                labels = tf.ones_like(d_logits_fake)) * (1 - smooth) )
 
 	tf.summary.scalar("d_loss_real", d_loss_real)
 	tf.summary.scalar("d_loss_fake", d_loss_fake)
@@ -156,8 +162,9 @@ with tf.Graph().as_default():
 				images = 2 * images - 1
 
 				# generator input noises
-				noises = np.random.uniform(-1, 1,
-					size = (batch_size, noise_img_size))
+				#noises = np.random.uniform(-1, 1,
+				#	size = (batch_size, noise_img_size))
+				noises = get_sample([batch_size, noise_img_size])
 
 				# Run optimizer
 				sess.run([d_train_opt, g_train_opt],
@@ -165,8 +172,7 @@ with tf.Graph().as_default():
 		
 		# train loss
 		images = 2 * mnist.train.images - 1.0
-		noises = np.random.uniform(-1, 1,
-			size = (mnist.train.num_examples, noise_img_size))
+		noises = get_sample([mnist.train.num_examples, noise_img_size])
 
 		summary_str, train_loss_d_real, train_loss_d_fake, train_loss_g = \
 			sess.run([summary, d_loss_real, d_loss_fake, g_loss],
