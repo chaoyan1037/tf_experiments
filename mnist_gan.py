@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from tensorflow.examples.tutorials.mnist import input_data
 
-mnist = input_data.read_data_sets('./MNIST_data/')
+mnist = input_data.read_data_sets('./MNIST_data/', one_hot=True)
 
 LOGDIR = "./log/mnist_gan" 
 
@@ -28,7 +28,7 @@ learning_rate = 0.001
 smooth = 0.05
 
 # train
-batch_size = 50
+batch_size = 100
 k = 10
 
 epochs = 300
@@ -36,12 +36,14 @@ epochs = 300
 
 def get_inputs(real_img_size, noise_img_size):
 	"""
-	read image tensor and noise image tensor
+	read image tensor and noise image tensor, as well as image digit
 	"""
 	real_img = tf.placeholder(tf.float32,
 		shape = [None, real_img_size], name = "real_img")
+
 	noise_img = tf.placeholder(tf.float32,
 		shape = [None, noise_img_size], name = "noise_img")
+
 	return real_img, noise_img
 
 def get_sample(sample_shape):
@@ -66,7 +68,7 @@ def get_generator(noise_img, n_units, out_dim, reuse = False, alpha = 0.01):
         # leaky ReLU
 		relu = tf.maximum(alpha * hidden, hidden)
         # dropout
-		drop = tf.layers.dropout(relu, rate = 0.2)
+		drop = tf.layers.dropout(relu, rate = 0.5)
 
         # logits & outputs
 		logits = tf.layers.dense(drop, out_dim)
@@ -86,9 +88,11 @@ def get_discriminator(img, n_units, reuse = False, alpha = 0.01):
         # hidden layer
 		hidden = tf.layers.dense(img, n_units)
 		relu = tf.maximum(alpha * hidden, hidden)
-        
+        # dropout
+		drop = tf.layers.dropout(relu, rate = 0.5)
+
         # logits & outputs
-		logits = tf.layers.dense(relu, 1)
+		logits = tf.layers.dense(drop, 1)
 		outputs = tf.sigmoid(logits)
         
 		return logits, outputs
@@ -101,7 +105,6 @@ with tf.Graph().as_default():
 	# generator
 	g_logits, g_outputs = get_generator(noise_img, g_units, real_img_size)
 
-	# ten = tf.convert_to_tensor(g_outputs)
 	sample_images = tf.reshape(g_outputs, [-1, 28, 28, 1])
 	tf.summary.image("sample_images", sample_images, 10)
 
@@ -157,13 +160,11 @@ with tf.Graph().as_default():
 			for j in xrange(k):
 				batch = mnist.train.next_batch(batch_size)
 
-				images = batch[0].reshape((batch_size, 784))
 				# scale the input images
+				images = batch[0].reshape((batch_size, 784))
 				images = 2 * images - 1
 
 				# generator input noises
-				#noises = np.random.uniform(-1, 1,
-				#	size = (batch_size, noise_img_size))
 				noises = get_sample([batch_size, noise_img_size])
 
 				# Run optimizer
@@ -187,14 +188,6 @@ with tf.Graph().as_default():
 			"Discriminator loss: {:.4f}(Real: {:.4f} + Fake: {:.4f})".format(
 				train_loss_d, train_loss_d_real, train_loss_d_fake),
 			"Generator loss: {:.4f}".format(train_loss_g))
-
-			
-
-		# sample_noise = np.random.uniform(-1, 1, size=(n_samples, noise_img_size))
-		# gen_samples = sess.run(get_generator(noise_img, g_uints, real_img_size, reuse = True),
-		#	feed_dict = {noise_img: sample_noise})
-
-		
 
 		# save checkpoints
 		saver.save(sess, os.path.join(LOGDIR, "model.ckpt"), global_step = e)
