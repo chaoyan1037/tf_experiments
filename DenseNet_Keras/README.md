@@ -1,5 +1,8 @@
 Copy from [DeepLearningImplementations](https://github.com/tdeboissiere/DeepLearningImplementations/tree/master/DenseNet)
-Made some small modifications
+
+Made some small modifications:
+1. Fix concatenate axis bugs
+2. Add bottlenet structure
 
 
 # Keras Implementation of DenseNet
