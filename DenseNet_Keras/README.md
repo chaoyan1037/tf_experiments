@@ -1,5 +1,5 @@
-# Copy from [DeepLearningImplementations](https://github.com/tdeboissiere/DeepLearningImplementations/tree/master/DenseNet)
-# Made some slight modifications
+Copy from [DeepLearningImplementations](https://github.com/tdeboissiere/DeepLearningImplementations/tree/master/DenseNet)
+Made some small modifications
 
 
 # Keras Implementation of DenseNet
