@@ -1,4 +1,9 @@
 # tf_experiments
-example from tensorflow website(https://www.tensorflow.org)
+Example from tensorflow website(https://www.tensorflow.org)
 
-add more summary items.
+Add more summary items.
+
+
+
+# 2017/12/26
+Add Keras implementation of DenseNet.
